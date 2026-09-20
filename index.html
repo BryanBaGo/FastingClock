@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fasting Clock</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{color-scheme:dark;--bg:#000;--card:#1C1C1E;--cb:#2C2C2E;--fg:#fff;--mut:#8E8E93;--ter:#C7C7CC;--ctl:#48484A}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);color:var(--fg);font:500 15px/1.4 "Plus Jakarta Sans",-apple-system,system-ui,sans-serif;font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
+main{max-width:480px;margin:0 auto;padding:20px 16px 110px}
+button,input,select{font:inherit;color:inherit}
+button{background:none;border:0;padding:0;cursor:pointer;text-align:left}
+svg{display:block}
+a{color:var(--ter)}
+.hidden{display:none!important}
+header{display:flex;justify-content:space-between;align-items:center;margin:8px 0 18px}
+h1{font-size:32px;font-weight:800;letter-spacing:-.02em;margin:0}
+.goalwrap{position:relative;color:var(--fg)}
+#goal{appearance:none;-webkit-appearance:none;background:transparent;border:1.5px solid var(--ctl);border-radius:99px;padding:8px 34px 8px 16px;font-weight:700;cursor:help;color:var(--fg)}
+#goal option{background:var(--card)}
+.goalwrap>span{position:absolute;right:12px;top:50%;transform:translateY(-50%);pointer-events:none}
+.card{background:var(--card);border:1px solid var(--cb);border-radius:22px;padding:18px;margin-bottom:12px;position:relative;overflow:hidden}
+.lbl{font-size:11px;font-weight:600;color:var(--mut);text-transform:uppercase;letter-spacing:.09em}
+.hero{display:flex;align-items:center;gap:18px}
+.ring{position:relative;width:120px;height:120px;flex:none}
+.ring b{position:absolute;inset:0;display:grid;place-items:center;font-size:22px;font-weight:800}
+.rows{display:flex;flex-direction:column;gap:10px;min-width:0}
+.val{font-size:19px;font-weight:700;display:block;margin-top:2px}
+#elapsed{font-size:26px;font-weight:800;letter-spacing:-.01em}
+#phase{cursor:help}
+.sub{font-size:12px;color:var(--mut);font-weight:500}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.two .card{margin:0;width:100%}
+.stat{display:block}
+.stat .t{display:flex;justify-content:space-between;align-items:center;font-size:14px;font-weight:700}
+.stat .t svg{color:var(--mut)}
+.stat .n{font-size:26px;font-weight:800;margin-top:10px;display:block}
+.stat .c{font-size:12px;color:var(--mut)}
+.spark{display:flex;align-items:flex-end;gap:5px;height:34px;margin-top:10px}
+.spark i{flex:1;background:#fff;border-radius:3px}
+.trend{display:block;width:100%}
+.trend .deco{position:absolute;right:-50px;top:-50px;width:170px;height:170px;border-radius:50%;border:16px solid #fff;opacity:.07}
+.trend .h{font-size:24px;font-weight:800;margin:6px 0 2px;display:block}
+.acts{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;font-weight:700;background:transparent;color:var(--fg);text-align:center}
+.btn.p{border:1.5px solid #fff;border-radius:16px;padding:15px}
+.btn.s{border:1.5px solid var(--ctl);border-radius:14px;padding:14px;width:100%;color:var(--ter)}
+.btn:active,.stat:active,.trend:active{opacity:.6}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px}
+.chips button{border:1.5px solid var(--ctl);border-radius:99px;padding:9px 14px;font-size:14px;font-weight:600;color:var(--ter)}
+.field{background:transparent;border:1.5px solid var(--ctl);border-radius:12px;padding:10px 12px;outline:0;color:var(--fg)}
+.field:focus{border-color:#fff}
+.field option{background:var(--card)}
+.crow{display:flex;gap:8px;margin-top:12px}.crow input{flex:1;min-width:0}
+#more{margin-top:12px}
+.tog{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:18px 4px 0;font-weight:600}
+.sw{width:52px;height:30px;border-radius:99px;border:1.5px solid var(--ctl);background:transparent;position:relative;flex:none}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#000;border:2px solid #fff;transition:transform .15s}
+.sw[aria-checked=true]::after{transform:translateX(22px)}
+#banner{font-size:13px;color:var(--ter)}
+ul{list-style:none;margin:0;padding:0}
+li{display:flex;align-items:center;gap:12px;padding:12px 0;border-top:1px solid var(--cb)}li:first-child{border-top:0;padding-top:0}li:last-child{padding-bottom:0}
+li .ic{width:36px;height:36px;border-radius:50%;border:1.5px solid var(--ctl);display:grid;place-items:center;flex:none}
+li .t{margin-left:auto;color:var(--mut);font-size:13px}
+.ph{padding:8px 0;border-top:1px solid var(--cb)}.ph:first-child{border-top:0}
+.ph b{display:block}.ph span{font-size:13px;color:var(--mut)}
+#tabs{position:fixed;left:0;right:0;bottom:0;background:#000;border-top:1px solid var(--cb);padding:8px 16px calc(10px + env(safe-area-inset-bottom));z-index:9}
+#tabs div{max-width:480px;margin:0 auto;display:flex;gap:6px}
+#tabs button{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 0;border-radius:99px;color:var(--mut);font-size:11px;font-weight:600;text-align:center}
+#tabs button[aria-current=page]{background:#fff;color:#000}
+</style>
+</head>
+<body>
+<main>
+<header>
+  <h1>Fasting</h1>
+  <div class="goalwrap">
+    <select id="goal" aria-label="Goal window">
+      <option value="14">14:10</option><option value="16">16:8</option><option value="18">18:6</option>
+      <option value="20">20:4</option><option value="23">OMAD 23:1</option>
+    </select>
+    <span data-i="chevD" data-s="14"></span>
+  </div>
+</header>
+
+<div id="banner" class="card hidden">Example data — this is a placeholder until you log your first real entry.</div>
+
+<!-- TODAY -->
+<div id="tab-today">
+  <section class="card hero">
+    <div class="ring">
+      <svg id="ringsvg" viewBox="0 0 120 120" width="120" height="120"></svg>
+      <b id="pct"></b>
+    </div>
+    <div class="rows">
+      <div><span class="lbl">Elapsed</span><button id="elapsed" class="val" title="Tap to set a different time"></button></div>
+      <div><span class="lbl">Phase</span><span id="phase" class="val"></span></div>
+      <div><span class="lbl">Goal</span><span id="goalv" class="val"></span><span id="remain" class="sub"></span></div>
+      <a href="#" id="editLink" class="sub">Set a different time</a>
+    </div>
+  </section>
+
+  <section id="editPanel" class="card hidden">
+    <label class="lbl">Last caloric intake<br><input type="datetime-local" id="editTime" class="field" style="margin-top:8px"></label>
+    <div class="crow"><button class="btn p" id="editSet" style="flex:1">Set</button><button class="btn s" id="editCancel" style="flex:1">Cancel</button></div>
+  </section>
+
+  <div class="two">
+    <button class="card stat" data-go="history"><span class="t">Today <span data-i="chevR" data-s="16"></span></span><span class="n" id="todayN"></span><span class="c">intakes logged</span><div class="spark" id="sparkT"></div></button>
+    <button class="card stat" data-go="history"><span class="t">Streak <span data-i="chevR" data-s="16"></span></span><span class="n" id="streakN"></span><span class="c">days hitting goal</span><div class="spark" id="sparkS"></div></button>
+  </div>
+
+  <button class="card trend" data-go="history">
+    <span class="deco"></span>
+    <span class="lbl">Longest fast</span>
+    <span class="h" id="trendH"></span>
+    <span class="sub" id="trendS"></span>
+  </button>
+
+  <div class="acts">
+    <button class="btn p" id="logMeal"><span data-i="meal"></span>Log meal</button>
+    <button class="btn p" id="logDrink"><span data-i="cup"></span>Log drink</button>
+  </div>
+  <button class="btn s" id="moreBtn">Log something else</button>
+  <div id="more" class="card hidden">
+    <div class="chips" id="chips"></div>
+    <div class="sub">Note on diet soda: zero calories, but artificial sweetness can trigger a minor insulin response in some people (cephalic phase response). Counted as non-caloric by default.</div>
+    <div class="crow">
+      <input type="text" id="customLbl" class="field" placeholder="Something else…" aria-label="Custom label">
+      <select id="customCal" class="field" aria-label="Has calories"><option value="0">No calories</option><option value="1">Has calories</option></select>
+      <button class="btn p" id="customAdd" style="padding:10px 16px;border-radius:12px">Log</button>
+    </div>
+  </div>
+  <div class="tog"><span id="swl">Diet drinks count as caloric</span><button class="sw" id="strict" role="switch" aria-checked="false" aria-labelledby="swl"></button></div>
+</div>
+
+<!-- HISTORY -->
+<div id="tab-history" class="hidden">
+  <h1 style="margin-bottom:16px;font-size:26px">History</h1>
+  <section class="card"><ul id="hist"></ul></section>
+</div>
+
+<!-- SETTINGS -->
+<div id="tab-settings" class="hidden">
+  <h1 style="margin-bottom:16px;font-size:26px">Settings</h1>
+  <section class="card" id="phaseList"></section>
+  <p class="sub">Phases are population-average approximations, not personalized or medical figures. Data is stored on this device only.</p>
+  <button class="btn s" id="reset">Reset all data</button>
+</div>
+</main>
+
+<nav id="tabs"><div>
+  <button data-tab="today" aria-current="page"><span data-i="today"></span>Today</button>
+  <button data-tab="history"><span data-i="history"></span>History</button>
+  <button data-tab="settings"><span data-i="settings"></span>Settings</button>
+</div></nav>
+
+<script>
+const PHASES=[
+ {end:4,label:"Digesting",why:"0–4h: stomach is emptying; insulin and blood sugar are elevated from the meal."},
+ {end:8,label:"Post-absorptive",why:"4–8h: blood sugar and insulin are back near baseline; body starts drawing on liver glycogen."},
+ {end:12,label:"Entering fasted state",why:"8–12h: glycogen stores are depleting; metabolism is shifting toward fat oxidation."},
+ {end:Infinity,label:"Fat-burning",why:"12h+: body is in a fasted state and burning stored fat for energy."}];
+const phaseFor=h=>PHASES.find(p=>h<p.end)||PHASES[3];
+function segmentWidths(g){const e=[0,Math.min(4,g),Math.min(8,g),Math.min(12,g),g];
+  return [1,2,3,4].map(i=>(e[i]-e[i-1])/g*100);}
+const GOALS={14:"14:10 — fast 14 hours, eat within a 10-hour window. A gentle starting point.",
+  16:"16:8 — fast 16 hours, eat within an 8-hour window. The most common plan.",
+  18:"18:6 — fast 18 hours, eat within a 6-hour window.",
+  20:"20:4 — fast 20 hours, eat within a 4-hour window.",
+  23:"OMAD (23:1) — one meal a day: fast 23 hours, eat within 1 hour."};
+
+// [label, caloric, sweetened-drink]
+const PRESETS=[["Meal",1],["Snack",1],["Sugary drink",1],["Alcohol",1],["Coffee/tea with cream or sugar",1],
+  ["Protein shake/smoothie",1],["Water",0],["Black coffee",0],["Plain tea",0],["Diet soda",0,1],["Sugar-free gum",0]];
+
+const P={
+ meal:'<path d="M7 3v8M4 3v5a3 3 0 0 0 6 0V3M7 11v10M17 3c-2 1.5-3 4-3 7 0 1.5 1 2 3 2v9"/>',
+ cup:'<path d="M5 8h12v6a5 5 0 0 1-5 5h-2a5 5 0 0 1-5-5V8zM17 10h1.5a2.5 2.5 0 0 1 0 5H17M8 3v2M12 3v2"/>',
+ drop:'<path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/>',
+ chevD:'<path d="M6 9l6 6 6-6"/>',chevR:'<path d="M9 6l6 6-6 6"/>',
+ today:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+ history:'<path d="M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5M12 8v4l3 2"/>',
+ settings:'<path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/>'};
+const svg=(n,s=20)=>`<svg viewBox="0 0 24 24" width="${s}" height="${s}" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[n]}</svg>`;
+document.querySelectorAll("[data-i]").forEach(e=>e.innerHTML=svg(e.dataset.i,+e.dataset.s||20));
+const iconFor=e=>!e.caloric?"drop":/drink|soda|coffee|tea|shake|smoothie|alcohol|juice/i.test(e.label)?"cup":"meal";
+
+const KEY="fastingClock",H=3600e3,DAY=864e5;
+function example(){const n=Date.now();
+  return{lastIntake:new Date(n-5*H).toISOString(),goalHours:16,isExample:true,history:[
+    {time:new Date(n-5*H).toISOString(),label:"Meal",caloric:true},
+    {time:new Date(n-8*H).toISOString(),label:"Water",caloric:false}]};}
+function load(){try{const s=JSON.parse(localStorage.getItem(KEY));if(s&&s.lastIntake)return s;}catch(e){}return example();}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
+function loadStrict(){try{return localStorage.getItem(KEY+".strict")==="1";}catch(e){return false;}}
+let S=load(),strict=loadStrict();
+const $=id=>document.getElementById(id);
+
+function addEntry(label,caloric,time=new Date()){
+  if(caloric&&S.isExample){S.history=[];S.isExample=false;} // first real caloric entry replaces placeholder data
+  S.history.push({time:time.toISOString(),label,caloric});
+  S.history.sort((a,b)=>b.time.localeCompare(a.time));
+  S.history=S.history.slice(0,20);
+  if(caloric)S.lastIntake=time.toISOString();
+  save();render();
+}
+const logPreset=([label,cal,sweet])=>addEntry(label,!!cal||(strict&&!!sweet));
+
+const fmtHM=ms=>{const m=Math.max(0,Math.floor(ms/60000));return`${Math.floor(m/60)}h ${String(m%60).padStart(2,"0")}m`;};
+function fmtTime(iso){const d=new Date(iso);
+  return d.toDateString()===new Date().toDateString()?d.toLocaleTimeString([],{hour:"numeric",minute:"2-digit"})
+    :d.toLocaleDateString([],{month:"short",day:"numeric"});}
+
+// ponytail: history is capped at 20, so streak/longest only see recent intakes
+const dayKey=d=>new Date(d).toDateString();
+function fastGaps(){ // fasts between consecutive caloric intakes: [{end, hours}]
+  const c=S.history.filter(e=>e.caloric).map(e=>new Date(e.time)).sort((a,b)=>a-b),out=[];
+  for(let i=1;i<c.length;i++)out.push({end:c[i],hours:(c[i]-c[i-1])/H});
+  return out;}
+function stats(){
+  const g=S.goalHours,gaps=fastGaps(),cur=(Date.now()-new Date(S.lastIntake))/H,days=[];
+  for(let i=6;i>=0;i--){const k=dayKey(Date.now()-i*DAY);
+    days.push({n:S.history.filter(e=>dayKey(e.time)===k).length,
+      hit:gaps.some(x=>dayKey(x.end)===k&&x.hours>=g)||(i===0&&cur>=g)});}
+  let streak=0,i=days[6].hit?6:5; // today not hit yet doesn't break the streak
+  for(;i>=0&&days[i].hit;i--)streak++;
+  return{days,streak,longest:Math.max(cur,...gaps.map(x=>x.hours)),today:days[6].n};}
+const spark=(vals,el)=>{el.innerHTML=vals.map(([h,o])=>`<i style="height:${h}px;opacity:${o}"></i>`).join("");};
+
+function render(){
+  const ms=Date.now()-new Date(S.lastIntake),h=ms/H,g=S.goalHours,ph=phaseFor(h),ratio=Math.min(1,h/g);
+  $("banner").classList.toggle("hidden",!S.isExample);
+  $("goal").value=g;$("goal").title="Goal window: "+GOALS[g]+" Changing it only updates the ring and countdown.";
+  $("strict").setAttribute("aria-checked",strict);
+  $("elapsed").textContent=fmtHM(ms);
+  $("phase").textContent=ph.label;$("phase").title=ph.why+" (Population averages, not medical figures.)";
+  $("goalv").textContent=g+"h";
+  const r=g-h;$("remain").textContent=r>0?`${fmtHM(r*H)} to goal`:`${fmtHM(-r*H)} past goal`;
+  $("pct").textContent=Math.round(ratio*100)+"%";
+
+  // ring: gray track, white arc, phase boundaries notched in via segmentWidths
+  const R=52,C=2*Math.PI*R;let acc=0,ticks="";
+  segmentWidths(g).slice(0,3).forEach(w=>{acc+=w;if(acc>=99.9)return;const a=acc/100*2*Math.PI-Math.PI/2;
+    ticks+=`<line x1="${60+(R-7)*Math.cos(a)}" y1="${60+(R-7)*Math.sin(a)}" x2="${60+(R+7)*Math.cos(a)}" y2="${60+(R+7)*Math.sin(a)}" stroke="#1C1C1E" stroke-width="3"/>`;});
+  $("ringsvg").innerHTML=`<circle cx="60" cy="60" r="${R}" fill="none" stroke="#3A3A3C" stroke-width="10"/>
+    <circle cx="60" cy="60" r="${R}" fill="none" stroke="#fff" stroke-width="10" stroke-linecap="round" stroke-dasharray="${C*ratio} ${C}" transform="rotate(-90 60 60)"/>${ticks}`;
+
+  const st=stats(),mx=Math.max(1,...st.days.map(d=>d.n));
+  $("todayN").textContent=st.today;$("streakN").textContent=st.streak;
+  spark(st.days.map((d,i)=>[4+d.n/mx*30,.3+.7*i/6]),$("sparkT"));
+  spark(st.days.map(d=>[d.hit?32:8,d.hit?1:.3]),$("sparkS"));
+  $("trendH").textContent=fmtHM(st.longest*H);
+  $("trendS").textContent=`across your last ${S.history.filter(e=>e.caloric).length} logged meals`;
+
+  $("hist").innerHTML=S.history.slice(0,6).map(e=>`<li><span class="ic">${svg(iconFor(e),18)}</span><span class="l"></span><span class="t">${fmtTime(e.time)}</span></li>`).join("")||"<li class='sub'>Nothing logged yet.</li>";
+  [...$("hist").querySelectorAll(".l")].forEach((el,i)=>el.textContent=S.history[i].label+(S.history[i].caloric?"":" · no reset"));
+}
+
+function openEdit(e){if(e)e.preventDefault();const p=n=>String(n).padStart(2,"0");
+  const loc=t=>`${t.getFullYear()}-${p(t.getMonth()+1)}-${p(t.getDate())}T${p(t.getHours())}:${p(t.getMinutes())}`;
+  $("editTime").max=loc(new Date());$("editTime").value=loc(new Date(S.lastIntake));$("editPanel").classList.remove("hidden");}
+$("elapsed").onclick=openEdit;$("editLink").onclick=openEdit;
+$("editCancel").onclick=()=>$("editPanel").classList.add("hidden");
+$("editSet").onclick=()=>{const t=new Date($("editTime").value);
+  if(isNaN(t)||t>new Date())return;
+  addEntry("Meal",true,t);$("editPanel").classList.add("hidden");};
+$("goal").onchange=e=>{S.goalHours=+e.target.value;save();render();};
+$("strict").onclick=()=>{strict=!strict;try{localStorage.setItem(KEY+".strict",strict?"1":"0");}catch(_){}render();};
+$("logMeal").onclick=()=>logPreset(PRESETS[0]);
+$("logDrink").onclick=()=>logPreset(PRESETS[2]);
+$("moreBtn").onclick=()=>$("more").classList.toggle("hidden");
+$("chips").innerHTML=PRESETS.map((p,i)=>`<button data-p="${i}">${p[0]}</button>`).join("");
+$("chips").onclick=e=>{const b=e.target.closest("button");if(b)logPreset(PRESETS[+b.dataset.p]);};
+$("customAdd").onclick=()=>{const l=$("customLbl").value.trim();if(!l)return;
+  addEntry(l,$("customCal").value==="1");$("customLbl").value="";};
+$("phaseList").innerHTML=PHASES.map(p=>`<div class="ph"><b>${p.label}</b><span>${p.why}</span></div>`).join("");
+$("reset").onclick=()=>{if(!confirm("Erase all logged data on this device?"))return;
+  try{localStorage.removeItem(KEY);}catch(e){}S=example();render();};
+
+function go(tab){["today","history","settings"].forEach(t=>$("tab-"+t).classList.toggle("hidden",t!==tab));
+  document.querySelectorAll("#tabs button").forEach(b=>b.dataset.tab===tab?b.setAttribute("aria-current","page"):b.removeAttribute("aria-current"));
+  scrollTo(0,0);}
+document.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>go(b.dataset.tab));
+document.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>go(b.dataset.go));
+
+render();setInterval(render,30000);
+</script>
+</body>
+</html>
