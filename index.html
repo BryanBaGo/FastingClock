@@ -146,6 +146,12 @@ li .t{margin-left:auto;color:var(--mut);font-size:13px}
 <!-- SETTINGS -->
 <div id="tab-settings" class="hidden">
   <h1 style="margin-bottom:16px;font-size:26px">Settings</h1>
+  <section class="card">
+    <span class="lbl">Sync</span>
+    <p id="syncStatus" class="sub" style="margin:8px 0 12px">Not syncing — data stays on this device.</p>
+    <button class="btn s" id="signIn">Sign in with Google</button>
+    <button class="btn s hidden" id="signOut">Sign out</button>
+  </section>
   <section class="card" id="phaseList"></section>
   <p class="sub">Phases are population-average approximations, not personalized or medical figures. Data is stored on this device only.</p>
   <button class="btn s" id="reset">Reset all data</button>
@@ -195,9 +201,11 @@ function example(){const n=Date.now();
     {time:new Date(n-5*H).toISOString(),label:"Meal",caloric:true},
     {time:new Date(n-8*H).toISOString(),label:"Water",caloric:false}]};}
 function load(){try{const s=JSON.parse(localStorage.getItem(KEY));if(s&&s.lastIntake)return s;}catch(e){}return example();}
-function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
+function store(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
+function save(){S.updatedAt=Date.now();store();if(window.cloudPush)cloudPush();} // updatedAt: newest write wins across devices
+function applyRemote(d){S=d;strict=!!d.strict;store();render();}
 function loadStrict(){try{return localStorage.getItem(KEY+".strict")==="1";}catch(e){return false;}}
-let S=load(),strict=loadStrict();
+let S=load(),strict=S.strict??loadStrict();
 const $=id=>document.getElementById(id);
 
 function addEntry(label,caloric,time=new Date()){
@@ -269,7 +277,7 @@ $("editSet").onclick=()=>{const t=new Date($("editTime").value);
   if(isNaN(t)||t>new Date())return;
   addEntry("Meal",true,t);$("editPanel").classList.add("hidden");};
 $("goal").onchange=e=>{S.goalHours=+e.target.value;save();render();};
-$("strict").onclick=()=>{strict=!strict;try{localStorage.setItem(KEY+".strict",strict?"1":"0");}catch(_){}render();};
+$("strict").onclick=()=>{strict=!strict;S.strict=strict;save();render();};
 $("logMeal").onclick=()=>logPreset(PRESETS[0]);
 $("logDrink").onclick=()=>logPreset(PRESETS[2]);
 $("moreBtn").onclick=()=>$("more").classList.toggle("hidden");
@@ -279,7 +287,7 @@ $("customAdd").onclick=()=>{const l=$("customLbl").value.trim();if(!l)return;
   addEntry(l,$("customCal").value==="1");$("customLbl").value="";};
 $("phaseList").innerHTML=PHASES.map(p=>`<div class="ph"><b>${p.label}</b><span>${p.why}</span></div>`).join("");
 $("reset").onclick=()=>{if(!confirm("Erase all logged data on this device?"))return;
-  try{localStorage.removeItem(KEY);}catch(e){}S=example();render();};
+  try{localStorage.removeItem(KEY);}catch(e){}if(window.cloudReset)cloudReset();S=example();render();};
 
 function go(tab){["today","history","settings"].forEach(t=>$("tab-"+t).classList.toggle("hidden",t!==tab));
   document.querySelectorAll("#tabs button").forEach(b=>b.dataset.tab===tab?b.setAttribute("aria-current","page"):b.removeAttribute("aria-current"));
@@ -288,6 +296,31 @@ document.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>go(b.dataset.ta
 document.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>go(b.dataset.go));
 
 render();setInterval(render,30000);
+</script>
+<script type="module">
+import {initializeApp} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {getAuth,GoogleAuthProvider,signInWithPopup,signOut,onAuthStateChanged} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import {getFirestore,doc,setDoc,deleteDoc,onSnapshot} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+const app=initializeApp({apiKey:"AIzaSyB_QzeHdTITHhCemOof2nq4FYnELUwTBo8",authDomain:"fastingclock-9aeb5.firebaseapp.com",
+  projectId:"fastingclock-9aeb5",storageBucket:"fastingclock-9aeb5.firebasestorage.app",
+  messagingSenderId:"845229805525",appId:"1:845229805525:web:c1d985eed2ea910e90b75c"}); // public by design; Firestore rules guard the data
+const auth=getAuth(app),db=getFirestore(app);
+let ref=null,unsub=null;
+const status=t=>$("syncStatus").textContent=t;
+window.cloudPush=()=>{if(!ref||S.isExample)return;S.updatedAt=S.updatedAt||Date.now();
+  setDoc(ref,JSON.parse(JSON.stringify(S))).catch(()=>status("Sync failed — will retry on your next change."));};
+window.cloudReset=()=>ref&&deleteDoc(ref);
+onAuthStateChanged(auth,u=>{
+  unsub&&unsub();unsub=null;ref=null;
+  $("signIn").classList.toggle("hidden",!!u);$("signOut").classList.toggle("hidden",!u);
+  if(!u){status("Not syncing — data stays on this device.");return;}
+  status("Syncing as "+u.email);
+  ref=doc(db,"users",u.uid);
+  unsub=onSnapshot(ref,snap=>{const d=snap.data(),r=d?.updatedAt||0,l=S.updatedAt||0;
+    if(d&&r>l)applyRemote(d);else if(!d||r<l)cloudPush();});
+});
+$("signIn").onclick=()=>signInWithPopup(auth,new GoogleAuthProvider()).catch(e=>status("Sign-in failed: "+e.code));
+$("signOut").onclick=()=>signOut(auth);
 </script>
 </body>
 </html>
