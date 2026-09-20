@@ -67,6 +67,9 @@ li .ic{width:36px;height:36px;border-radius:50%;border:1.5px solid var(--ctl);di
 li .t{margin-left:auto;color:var(--mut);font-size:13px}
 .ph{padding:8px 0;border-top:1px solid var(--cb)}.ph:first-child{border-top:0}
 .ph b{display:block}.ph span{font-size:13px;color:var(--mut)}
+#toast{position:fixed;left:16px;right:16px;bottom:88px;max-width:448px;margin:0 auto;background:var(--card);border:1px solid var(--cb);border-radius:16px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;gap:12px;z-index:10;font-weight:600}
+#toast button{font-weight:800;color:#fff}
+li .del{width:32px;height:32px;border:1.5px solid var(--ctl);border-radius:50%;display:grid;place-items:center;color:var(--mut);flex:none}
 #tabs{position:fixed;left:0;right:0;bottom:0;background:#000;border-top:1px solid var(--cb);padding:8px 16px calc(10px + env(safe-area-inset-bottom));z-index:9}
 #tabs div{max-width:480px;margin:0 auto;display:flex;gap:6px}
 #tabs button{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 0;border-radius:99px;color:var(--mut);font-size:11px;font-weight:600;text-align:center}
@@ -126,6 +129,7 @@ li .t{margin-left:auto;color:var(--mut);font-size:13px}
   </div>
   <button class="btn s" id="moreBtn">Log something else</button>
   <div id="more" class="card hidden">
+    <label class="lbl">When (leave blank for now)<br><input type="datetime-local" id="whenTime" class="field" style="margin:8px 0 14px;width:100%"></label>
     <div class="chips" id="chips"></div>
     <div class="sub">Note on diet soda: zero calories, but artificial sweetness can trigger a minor insulin response in some people (cephalic phase response). Counted as non-caloric by default.</div>
     <div class="crow">
@@ -158,6 +162,8 @@ li .t{margin-left:auto;color:var(--mut);font-size:13px}
 </div>
 </main>
 
+<div id="toast" class="hidden" role="status"><span id="toastMsg"></span><button id="toastUndo">Undo</button></div>
+
 <nav id="tabs"><div>
   <button data-tab="today" aria-current="page"><span data-i="today"></span>Today</button>
   <button data-tab="history"><span data-i="history"></span>History</button>
@@ -187,6 +193,7 @@ const P={
  meal:'<path d="M7 3v8M4 3v5a3 3 0 0 0 6 0V3M7 11v10M17 3c-2 1.5-3 4-3 7 0 1.5 1 2 3 2v9"/>',
  cup:'<path d="M5 8h12v6a5 5 0 0 1-5 5h-2a5 5 0 0 1-5-5V8zM17 10h1.5a2.5 2.5 0 0 1 0 5H17M8 3v2M12 3v2"/>',
  drop:'<path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/>',
+ x:'<path d="M6 6l12 12M18 6L6 18"/>',
  chevD:'<path d="M6 9l6 6 6-6"/>',chevR:'<path d="M9 6l6 6-6 6"/>',
  today:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
  history:'<path d="M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5M12 8v4l3 2"/>',
@@ -208,15 +215,30 @@ function loadStrict(){try{return localStorage.getItem(KEY+".strict")==="1";}catc
 let S=load(),strict=S.strict??loadStrict();
 const $=id=>document.getElementById(id);
 
-function addEntry(label,caloric,time=new Date()){
-  if(caloric&&S.isExample){S.history=[];S.isExample=false;} // first real caloric entry replaces placeholder data
+const snap=()=>JSON.stringify(S);
+let toastT;
+function toast(msg,prev){$("toastMsg").textContent=msg;$("toast").classList.remove("hidden");
+  $("toastUndo").onclick=()=>{S=JSON.parse(prev);save();render();$("toast").classList.add("hidden");};
+  clearTimeout(toastT);toastT=setTimeout(()=>$("toast").classList.add("hidden"),6000);}
+function addEntry(label,caloric,time=new Date(),force=false){
+  const prev=snap();
+  if(caloric&&S.isExample){S.history=[];S.isExample=false;S.lastIntake=time.toISOString();} // first real caloric entry replaces placeholder data
   S.history.push({time:time.toISOString(),label,caloric});
   S.history.sort((a,b)=>b.time.localeCompare(a.time));
   S.history=S.history.slice(0,20);
-  if(caloric)S.lastIntake=time.toISOString();
-  save();render();
+  // a past meal must not move the clock back; only an explicit "set time" (force) may
+  if(caloric&&(force||time>new Date(S.lastIntake)))S.lastIntake=time.toISOString();
+  save();render();toast("Logged "+label,prev);
 }
-const logPreset=([label,cal,sweet])=>addEntry(label,!!cal||(strict&&!!sweet));
+function deleteEntry(i){
+  const prev=snap(),e=S.history.splice(i,1)[0];
+  const last=S.history.filter(x=>x.caloric).map(x=>x.time).sort().pop();
+  if(e.caloric&&last)S.lastIntake=last; // fast clock falls back to the previous meal
+  save();render();toast("Deleted "+e.label,prev);
+}
+function whenDate(){const v=$("whenTime").value,t=new Date(v);$("whenTime").value="";
+  return v&&!isNaN(t)&&t<=new Date()?t:new Date();}
+const logPreset=([label,cal,sweet],when=new Date())=>addEntry(label,!!cal||(strict&&!!sweet),when);
 
 const fmtHM=ms=>{const m=Math.max(0,Math.floor(ms/60000));return`${Math.floor(m/60)}h ${String(m%60).padStart(2,"0")}m`;};
 function fmtTime(iso){const d=new Date(iso);
@@ -264,7 +286,7 @@ function render(){
   $("trendH").textContent=fmtHM(st.longest*H);
   $("trendS").textContent=`across your last ${S.history.filter(e=>e.caloric).length} logged meals`;
 
-  $("hist").innerHTML=S.history.slice(0,6).map(e=>`<li><span class="ic">${svg(iconFor(e),18)}</span><span class="l"></span><span class="t">${fmtTime(e.time)}</span></li>`).join("")||"<li class='sub'>Nothing logged yet.</li>";
+  $("hist").innerHTML=S.history.slice(0,6).map((e,i)=>`<li><span class="ic">${svg(iconFor(e),18)}</span><span class="l"></span><span class="t">${fmtTime(e.time)}</span><button class="del" data-d="${i}" aria-label="Delete entry">${svg("x",14)}</button></li>`).join("")||"<li class='sub'>Nothing logged yet.</li>";
   [...$("hist").querySelectorAll(".l")].forEach((el,i)=>el.textContent=S.history[i].label+(S.history[i].caloric?"":" · no reset"));
 }
 
@@ -275,16 +297,18 @@ $("elapsed").onclick=openEdit;$("editLink").onclick=openEdit;
 $("editCancel").onclick=()=>$("editPanel").classList.add("hidden");
 $("editSet").onclick=()=>{const t=new Date($("editTime").value);
   if(isNaN(t)||t>new Date())return;
-  addEntry("Meal",true,t);$("editPanel").classList.add("hidden");};
+  addEntry("Meal",true,t,true);$("editPanel").classList.add("hidden");};
 $("goal").onchange=e=>{S.goalHours=+e.target.value;save();render();};
 $("strict").onclick=()=>{strict=!strict;S.strict=strict;save();render();};
 $("logMeal").onclick=()=>logPreset(PRESETS[0]);
 $("logDrink").onclick=()=>logPreset(PRESETS[2]);
-$("moreBtn").onclick=()=>$("more").classList.toggle("hidden");
+$("moreBtn").onclick=()=>{$("more").classList.toggle("hidden");const d=new Date(),p=n=>String(n).padStart(2,"0");
+  $("whenTime").max=`${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;};
 $("chips").innerHTML=PRESETS.map((p,i)=>`<button data-p="${i}">${p[0]}</button>`).join("");
-$("chips").onclick=e=>{const b=e.target.closest("button");if(b)logPreset(PRESETS[+b.dataset.p]);};
+$("chips").onclick=e=>{const b=e.target.closest("button");if(b)logPreset(PRESETS[+b.dataset.p],whenDate());};
 $("customAdd").onclick=()=>{const l=$("customLbl").value.trim();if(!l)return;
-  addEntry(l,$("customCal").value==="1");$("customLbl").value="";};
+  addEntry(l,$("customCal").value==="1",whenDate());$("customLbl").value="";};
+$("hist").onclick=e=>{const b=e.target.closest(".del");if(b)deleteEntry(+b.dataset.d);};
 $("phaseList").innerHTML=PHASES.map(p=>`<div class="ph"><b>${p.label}</b><span>${p.why}</span></div>`).join("");
 $("reset").onclick=()=>{if(!confirm("Erase all logged data on this device?"))return;
   try{localStorage.removeItem(KEY);}catch(e){}if(window.cloudReset)cloudReset();S=example();render();};
